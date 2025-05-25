@@ -10,7 +10,7 @@ import (
 
 const (
 	CaptivePortalURL = "http://clients3.google.com/generate_204"
-	DialPingAddress = "8.8.8.8:80"
+	DialPingAddress  = "8.8.8.8:80"
 	InternetCheckURL = "https://www.google.com"
 )
 
@@ -52,7 +52,7 @@ func CheckInternetConnectivity() bool {
 
 func CheckCaptivePortal() bool {
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 5 * time.Second, // Shorter timeout for captive portal detection
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Don't follow redirects - we want to detect them
 			return http.ErrUseLastResponse
@@ -62,11 +62,21 @@ func CheckCaptivePortal() bool {
 	resp, err := client.Get(CaptivePortalURL)
 	if err != nil {
 		log.Printf("Captive portal check failed: %v", err)
-		return false
+		// If the request fails entirely, it could be a captive portal blocking traffic
+		// We'll return true (captive portal likely) in this case
+		return true
 	}
 	defer resp.Body.Close()
 
-	return resp.StatusCode != 204
+	// Status 204 (No Content) means no captive portal
+	// Any other status (redirect, blocked page, etc.) indicates captive portal
+	isCaptivePortal := resp.StatusCode != 204
+
+	if isCaptivePortal {
+		log.Printf("Captive portal detected - received status %d instead of 204", resp.StatusCode)
+	}
+
+	return isCaptivePortal
 }
 
 func HasNetworkChanged() bool {
