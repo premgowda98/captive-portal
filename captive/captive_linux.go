@@ -7,9 +7,7 @@ import (
 	"os/exec"
 )
 
-// OpenCaptivePortalLogin opens the captive portal login page in the default browser on Linux
 func OpenCaptivePortalLogin() error {
-	// Try different methods to open the browser on Linux
 	browsers := []string{"xdg-open", "firefox", "google-chrome", "chromium", "mozilla"}
 	url := "http://clients3.google.com/generate_204"
 

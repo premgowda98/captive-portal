@@ -8,20 +8,24 @@ import (
 	"time"
 )
 
-// NetworkState holds the current network state
+const (
+	CaptivePortalURL = "http://clients3.google.com/generate_204"
+	DialPingAddress = "8.8.8.8:80"
+	InternetCheckURL = "https://www.google.com"
+)
+
 type NetworkState struct {
 	OutboundIP       string
 	LastCheck        time.Time
 	IsConnected      bool
 	HasCaptivePortal bool
-	BrowserOpened    bool  // Track if we've already opened browser for current network
+	BrowserOpened    bool
 }
 
 var currentState NetworkState
 
-// GetOutboundIP determines the current active outbound IP address
 func GetOutboundIP() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	conn, err := net.Dial("udp", DialPingAddress)
 	if err != nil {
 		return "", err
 	}
@@ -31,13 +35,12 @@ func GetOutboundIP() (string, error) {
 	return localAddr.IP.String(), nil
 }
 
-// CheckInternetConnectivity tests connectivity to Google
 func CheckInternetConnectivity() bool {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	resp, err := client.Get("https://www.google.com")
+	resp, err := client.Get(InternetCheckURL)
 	if err != nil {
 		log.Printf("Internet connectivity check failed: %v", err)
 		return false
@@ -47,7 +50,6 @@ func CheckInternetConnectivity() bool {
 	return resp.StatusCode == 200
 }
 
-// CheckCaptivePortal detects if a captive portal is intercepting requests
 func CheckCaptivePortal() bool {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
@@ -57,19 +59,16 @@ func CheckCaptivePortal() bool {
 		},
 	}
 
-	resp, err := client.Get("http://clients3.google.com/generate_204")
+	resp, err := client.Get(CaptivePortalURL)
 	if err != nil {
 		log.Printf("Captive portal check failed: %v", err)
 		return false
 	}
 	defer resp.Body.Close()
 
-	// Status 204 (No Content) means no captive portal
-	// Any other status or redirect indicates captive portal
 	return resp.StatusCode != 204
 }
 
-// HasNetworkChanged checks if the IP address has changed
 func HasNetworkChanged() bool {
 	newIP, err := GetOutboundIP()
 	if err != nil {
@@ -87,7 +86,6 @@ func HasNetworkChanged() bool {
 	return changed
 }
 
-// UpdateNetworkState updates the current network state
 func UpdateNetworkState() error {
 	ip, err := GetOutboundIP()
 	if err != nil {
@@ -101,11 +99,9 @@ func UpdateNetworkState() error {
 	return nil
 }
 
-// MonitorCaptivePortal is the main monitoring function
 func MonitorCaptivePortal() {
 	log.Println("Starting captive portal monitoring...")
 
-	// Initial network state setup
 	if err := UpdateNetworkState(); err != nil {
 		log.Printf("Failed to initialize network state: %v", err)
 		return
@@ -114,20 +110,17 @@ func MonitorCaptivePortal() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	// Initial check
 	performConnectivityCheck()
 
 	for {
 		select {
 		case <-ticker.C:
-			// Check if network has changed
 			if HasNetworkChanged() {
 				log.Println("Network change detected, updating state...")
 				if err := UpdateNetworkState(); err != nil {
 					log.Printf("Failed to update network state: %v", err)
 					continue
 				}
-				// Reset browser opened flag when network changes
 				currentState.BrowserOpened = false
 				log.Println("Browser opened flag reset due to network change")
 			}
@@ -137,31 +130,27 @@ func MonitorCaptivePortal() {
 	}
 }
 
-// performConnectivityCheck runs the connectivity and captive portal checks
 func performConnectivityCheck() {
 	log.Println("Checking connectivity...")
 
-	// Check internet connectivity
 	isConnected := CheckInternetConnectivity()
 	currentState.IsConnected = isConnected
 
 	if isConnected {
 		log.Println("Internet connectivity confirmed - full access available")
 		currentState.HasCaptivePortal = false
-		// Reset browser opened flag when internet is working
 		currentState.BrowserOpened = false
 		return
 	}
 
 	log.Println("No internet connectivity detected - checking for captive portal...")
 
-	// Check for captive portal only when internet is not accessible
 	hasCaptivePortal := CheckCaptivePortal()
 	currentState.HasCaptivePortal = hasCaptivePortal
 
 	if hasCaptivePortal {
 		if !currentState.BrowserOpened {
-			log.Println("Captive portal detected! Opening login page...")
+			log.Println("Captive portal detected Opening login page...")
 			if err := OpenCaptivePortalLogin(); err != nil {
 				log.Printf("Failed to open captive portal login: %v", err)
 			} else {
@@ -174,9 +163,4 @@ func performConnectivityCheck() {
 	} else {
 		log.Println("No captive portal detected - network issue or no connectivity")
 	}
-}
-
-// GetCurrentState returns the current network state
-func GetCurrentState() NetworkState {
-	return currentState
 }
