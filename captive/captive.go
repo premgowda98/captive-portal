@@ -117,27 +117,16 @@ func MonitorCaptivePortal() {
 		return
 	}
 
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+	if HasNetworkChanged() {
+		log.Println("Network change detected, updating state...")
+		if err := UpdateNetworkState(); err != nil {
+			log.Printf("Failed to update network state: %v", err)
+		}
+		currentState.BrowserOpened = false
+		log.Println("Browser opened flag reset due to network change")
+	}
 
 	performConnectivityCheck()
-
-	for {
-		select {
-		case <-ticker.C:
-			if HasNetworkChanged() {
-				log.Println("Network change detected, updating state...")
-				if err := UpdateNetworkState(); err != nil {
-					log.Printf("Failed to update network state: %v", err)
-					continue
-				}
-				currentState.BrowserOpened = false
-				log.Println("Browser opened flag reset due to network change")
-			}
-
-			performConnectivityCheck()
-		}
-	}
 }
 
 func performConnectivityCheck() {
