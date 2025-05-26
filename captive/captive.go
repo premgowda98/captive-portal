@@ -112,11 +112,6 @@ func UpdateNetworkState() error {
 func MonitorCaptivePortal() {
 	log.Println("Starting captive portal monitoring...")
 
-	if err := UpdateNetworkState(); err != nil {
-		log.Printf("Failed to initialize network state: %v", err)
-		return
-	}
-
 	if HasNetworkChanged() {
 		log.Println("Network change detected, updating state...")
 		if err := UpdateNetworkState(); err != nil {
