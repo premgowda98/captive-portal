@@ -52,7 +52,7 @@ func CheckInternetConnectivity() bool {
 
 func CheckCaptivePortal() bool {
 	client := &http.Client{
-		Timeout: 5 * time.Second, // Shorter timeout for captive portal detection
+		Timeout: 5 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Don't follow redirects - we want to detect them
 			return http.ErrUseLastResponse
@@ -117,7 +117,7 @@ func MonitorCaptivePortal() {
 		return
 	}
 
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	performConnectivityCheck()
