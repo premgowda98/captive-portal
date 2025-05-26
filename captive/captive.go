@@ -37,7 +37,7 @@ func GetOutboundIP() (string, error) {
 
 func CheckInternetConnectivity() bool {
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 5 * time.Second,
 	}
 
 	resp, err := client.Get(InternetCheckURL)
