@@ -24,7 +24,7 @@ type NetworkState struct {
 
 var currentState NetworkState
 
-func GetOutboundIP() (string, error) {
+func getOutboundIP() (string, error) {
 	conn, err := net.Dial("udp", DialPingAddress)
 	if err != nil {
 		return "", err
@@ -35,7 +35,7 @@ func GetOutboundIP() (string, error) {
 	return localAddr.IP.String(), nil
 }
 
-func CheckInternetConnectivity() bool {
+func checkInternetConnectivity() bool {
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
@@ -50,7 +50,7 @@ func CheckInternetConnectivity() bool {
 	return resp.StatusCode == 200
 }
 
-func CheckCaptivePortal() bool {
+func checkCaptivePortal() bool {
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -79,8 +79,8 @@ func CheckCaptivePortal() bool {
 	return isCaptivePortal
 }
 
-func HasNetworkChanged() bool {
-	newIP, err := GetOutboundIP()
+func hasNetworkChanged() bool {
+	newIP, err := getOutboundIP()
 	if err != nil {
 		log.Printf("Failed to get outbound IP: %v", err)
 		return false
@@ -96,8 +96,8 @@ func HasNetworkChanged() bool {
 	return changed
 }
 
-func UpdateNetworkState() error {
-	ip, err := GetOutboundIP()
+func updateNetworkState() error {
+	ip, err := getOutboundIP()
 	if err != nil {
 		return fmt.Errorf("failed to get outbound IP: %v", err)
 	}
@@ -112,9 +112,9 @@ func UpdateNetworkState() error {
 func MonitorCaptivePortal() {
 	log.Println("Starting captive portal monitoring...")
 
-	if HasNetworkChanged() {
+	if hasNetworkChanged() {
 		log.Println("Network change detected, updating state...")
-		if err := UpdateNetworkState(); err != nil {
+		if err := updateNetworkState(); err != nil {
 			log.Printf("Failed to update network state: %v", err)
 		}
 		currentState.BrowserOpened = false
@@ -127,7 +127,7 @@ func MonitorCaptivePortal() {
 func performConnectivityCheck() {
 	log.Println("Checking connectivity...")
 
-	isConnected := CheckInternetConnectivity()
+	isConnected := checkInternetConnectivity()
 	currentState.IsConnected = isConnected
 
 	if isConnected {
@@ -139,7 +139,7 @@ func performConnectivityCheck() {
 
 	log.Println("No internet connectivity detected - checking for captive portal...")
 
-	hasCaptivePortal := CheckCaptivePortal()
+	hasCaptivePortal := checkCaptivePortal()
 	currentState.HasCaptivePortal = hasCaptivePortal
 
 	if hasCaptivePortal {
@@ -160,5 +160,5 @@ func performConnectivityCheck() {
 }
 
 func init(){
-	UpdateNetworkState()
+	updateNetworkState()
 }
