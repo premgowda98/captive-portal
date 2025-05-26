@@ -158,3 +158,7 @@ func performConnectivityCheck() {
 		log.Println("No captive portal detected - network issue or no connectivity")
 	}
 }
+
+func init(){
+	UpdateNetworkState()
+}
