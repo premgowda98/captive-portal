@@ -7,10 +7,12 @@ import (
 	"os/exec"
 )
 
-func OpenCaptivePortalLogin() error {
-	url := "http://clients3.google.com/generate_204"
+func OpenCaptivePortalLogin(redirectUrl string) error {
+	if redirectUrl == "" {
+		redirectUrl = "http://clients3.google.com/generate_204"
+	}
 
-	cmd := exec.Command("open", url)
+	cmd := exec.Command("open", redirectUrl)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to open browser on macOS: %v", err)
 	}

@@ -7,12 +7,17 @@ import (
 	"os/exec"
 )
 
-func OpenCaptivePortalLogin() error {
+func OpenCaptivePortalLogin(redirectUrl string) error {
 	browsers := []string{"xdg-open", "firefox", "google-chrome", "chromium", "mozilla"}
-	url := "http://clients3.google.com/generate_204"
+
+	if redirectUrl == "" {
+		redirectUrl = "http://clients3.google.com/generate_204"
+	}
+
+	fmt.Println("Opening in", redirectUrl)
 
 	for _, browser := range browsers {
-		cmd := exec.Command(browser, url)
+		cmd := exec.Command(browser, redirectUrl)
 		if err := cmd.Start(); err == nil {
 			return nil
 		}

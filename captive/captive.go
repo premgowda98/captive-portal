@@ -20,6 +20,7 @@ type NetworkState struct {
 	IsConnected      bool
 	HasCaptivePortal bool
 	BrowserOpened    bool
+	RedirectURL      string
 }
 
 var currentState NetworkState
@@ -73,6 +74,9 @@ func checkCaptivePortal() bool {
 	isCaptivePortal := resp.StatusCode != 204
 
 	if isCaptivePortal {
+		if resp.StatusCode == 302 {
+			currentState.RedirectURL = resp.Header.Get("Location")
+		}
 		log.Printf("Captive portal detected - received status %d instead of 204", resp.StatusCode)
 	}
 
@@ -91,6 +95,7 @@ func hasNetworkChanged() bool {
 	if changed {
 		log.Printf("Network change detected: IP %s->%s",
 			currentState.OutboundIP, newIP)
+		currentState.RedirectURL = "" // Reset redirect URL on network change
 	}
 
 	return changed
@@ -145,7 +150,7 @@ func performConnectivityCheck() {
 	if hasCaptivePortal {
 		if !currentState.BrowserOpened {
 			log.Println("Captive portal detected Opening login page...")
-			if err := OpenCaptivePortalLogin(); err != nil {
+			if err := OpenCaptivePortalLogin(currentState.RedirectURL); err != nil {
 				log.Printf("Failed to open captive portal login: %v", err)
 			} else {
 				currentState.BrowserOpened = true
@@ -159,6 +164,6 @@ func performConnectivityCheck() {
 	}
 }
 
-func init(){
+func init() {
 	updateNetworkState()
 }
