@@ -24,7 +24,7 @@ Some domains can be **preloaded into browsers**, meaning the browser knows to en
 
 * This list is **shipped with browsers like Chrome, Firefox, Safari, Edge**, etc.
 * To **submit your domain** to the preload list or check if it’s already on it, use this official site:
-  🔗 [https://hstspreload.org/?domain=sbi.com#submission-form](https://hstspreload.org/?domain=sbi.com#submission-form)
+  🔗 [https://hstspreload.org/?domain=chatgpt.com#submission-form](https://hstspreload.org/?domain=chatgpt.com#submission-form)
 
 ## 🌐 chrome://net-internals/#hsts
 
