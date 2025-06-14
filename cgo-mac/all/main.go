@@ -1,75 +1,111 @@
 package main
 
 /*
-#cgo LDFLAGS: -framework Foundation -framework SystemConfiguration
-void startMonitoringNetworkChanges();
+#include "platform/platform.h"
 */
-import "C"
 import (
+	"C"
 	"fmt"
+	"net"
 	"net/http"
-	"os"
 	"os/exec"
-	"os/signal"
-	"syscall"
+	"runtime"
 	"time"
+
+	"github.com/premgowda/cgo-mac/all/platform"
 )
 
 //export networkChangedCallback
-func networkChangedCallback(msg *C.char) {
-	fmt.Println("[Go] Network change detected:", C.GoString(msg))
-	checkCaptivePortal()
-}
+func networkChangedCallback() {
+	fmt.Println("🔄 Network change detected")
 
-func checkCaptivePortal() {
-	client := http.Client{
-		Timeout: 5 * time.Second,
-	}
-
-	resp, err := client.Get("http://captive.apple.com")
-	if err != nil {
-		fmt.Println("[Go] Error checking captive portal:", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Captive.apple.com returns a page with the title "Success"
-	// If redirected or blocked, this likely means a captive portal is present
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("[Go] Captive portal suspected: non-200 response")
+	if behindCaptivePortal() {
+		fmt.Println("🌐 Captive portal detected. Opening browser...")
 		openBrowser("http://captive.apple.com")
-		return
-	}
-
-	// Try to detect if it was redirected
-	finalURL := resp.Request.URL.String()
-	if finalURL != "http://captive.apple.com" {
-		fmt.Printf("[Go] Redirected to: %s → Possible captive portal\n", finalURL)
-		openBrowser("http://captive.apple.com")
-		return
-	}
-
-	fmt.Println("[Go] No captive portal detected.")
-}
-
-func openBrowser(url string) {
-	fmt.Println("[Go] Opening browser to:", url)
-	err := exec.Command("open", url).Start() // macOS-specific
-	if err != nil {
-		fmt.Println("[Go] Failed to open browser:", err)
 	}
 }
 
 func main() {
-	fmt.Println("[Go] Starting network change monitor...")
-	checkCaptivePortal()
+	fmt.Println("📡 Starting network monitor for", runtime.GOOS)
+	go platform.StartNetworkMonitor()
 
-	go C.startMonitoringNetworkChanges()
+	// Keep app running
+	select {}
+}
 
-	// Wait for termination
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	<-sigs
+func behindCaptivePortal() bool {
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 
-	fmt.Println("[Go] Shutting down...")
+	var url string
+	switch runtime.GOOS {
+	case "darwin":
+		url = "http://clients3.google.com/generate_204"
+	case "linux":
+		url = "http://detectportal.firefox.com/canonical.html"
+	case "windows":
+		url = "http://www.msftconnecttest.com/connecttest.txt"
+	default:
+		url = "http://clients3.google.com/generate_204"
+	}
+
+	fmt.Println("📶 Checking captive portal at:", url)
+
+	timeoutCount := 0
+	for i := 1; i <= 3; i++ {
+		resp, err := client.Get(url)
+		if err != nil {
+			fmt.Printf("❌ Attempt %d: %v\n", i, err)
+			if isTimeoutError(err) {
+				timeoutCount++
+			}
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		defer resp.Body.Close()
+
+		// Captive portal usually redirects or doesn't return expected status
+		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+			fmt.Printf("🔁 Redirect detected (status: %d)\n", resp.StatusCode)
+			return true
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			fmt.Printf("⚠️ Unexpected status code: %d\n", resp.StatusCode)
+			return true
+		}
+
+		// No issues found
+		return false
+	}
+
+	// If all retries timed out, assume we're behind a captive portal
+	if timeoutCount == 3 {
+		fmt.Println("⏱️ All attempts timed out — assuming captive portal")
+		return true
+	}
+
+	return false
+}
+
+func isTimeoutError(err error) bool {
+	netErr, ok := err.(net.Error)
+	return ok && netErr.Timeout()
+}
+
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", url)
+	case "linux":
+		cmd = exec.Command("xdg-open", url)
+	default:
+		return
+	}
+	_ = cmd.Start()
 }
