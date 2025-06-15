@@ -17,16 +17,18 @@ import (
 
 //export networkChangedCallback
 func networkChangedCallback() {
-	fmt.Println("🔄 Network change detected")
+	fmt.Println("Network change detected")
+
+	url := "http://clients3.google.com/generate_204"
 
 	if behindCaptivePortal() {
-		fmt.Println("🌐 Captive portal detected. Opening browser...")
-		openBrowser("http://captive.apple.com")
+		fmt.Println("Captive portal detected. Opening browser...")
+		openBrowser(url)
 	}
 }
 
 func main() {
-	fmt.Println("📡 Starting network monitor for", runtime.GOOS)
+	fmt.Println("Starting network monitor for", runtime.GOOS)
 	go platform.StartNetworkMonitor()
 
 	// Keep app running
@@ -41,25 +43,15 @@ func behindCaptivePortal() bool {
 		},
 	}
 
-	var url string
-	switch runtime.GOOS {
-	case "darwin":
-		url = "http://clients3.google.com/generate_204"
-	case "linux":
-		url = "http://detectportal.firefox.com/canonical.html"
-	case "windows":
-		url = "http://www.msftconnecttest.com/connecttest.txt"
-	default:
-		url = "http://clients3.google.com/generate_204"
-	}
+	url := "http://clients3.google.com/generate_204"
 
-	fmt.Println("📶 Checking captive portal at:", url)
+	fmt.Println("Checking captive portal at:", url)
 
 	timeoutCount := 0
 	for i := 1; i <= 3; i++ {
 		resp, err := client.Get(url)
 		if err != nil {
-			fmt.Printf("❌ Attempt %d: %v\n", i, err)
+			fmt.Printf("Attempt %d: %v\n", i, err)
 			if isTimeoutError(err) {
 				timeoutCount++
 			}
@@ -70,12 +62,12 @@ func behindCaptivePortal() bool {
 
 		// Captive portal usually redirects or doesn't return expected status
 		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
-			fmt.Printf("🔁 Redirect detected (status: %d)\n", resp.StatusCode)
+			fmt.Printf("Redirect detected (status: %d)\n", resp.StatusCode)
 			return true
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			fmt.Printf("⚠️ Unexpected status code: %d\n", resp.StatusCode)
+			fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
 			return true
 		}
 
@@ -85,7 +77,7 @@ func behindCaptivePortal() bool {
 
 	// If all retries timed out, assume we're behind a captive portal
 	if timeoutCount == 3 {
-		fmt.Println("⏱️ All attempts timed out — assuming captive portal")
+		fmt.Println("All attempts timed out — assuming captive portal")
 		return true
 	}
 
@@ -104,6 +96,8 @@ func openBrowser(url string) {
 		cmd = exec.Command("open", url)
 	case "linux":
 		cmd = exec.Command("xdg-open", url)
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
 	default:
 		return
 	}
