@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/premgowda/cgo-mac/all/platform"
+	"github.com/premgowda/cgo-impl/iall-ntfr-impl/platform"
 )
 
 //export networkChangedCallback
