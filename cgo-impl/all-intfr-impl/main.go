@@ -29,6 +29,8 @@ func networkChangedCallback() {
 
 func main() {
 	fmt.Println("Starting network monitor for", runtime.GOOS)
+	// to test captive at first run
+	networkChangedCallback()
 	go platform.StartNetworkMonitor()
 
 	// Keep app running
@@ -66,12 +68,8 @@ func behindCaptivePortal() bool {
 			return true
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
-			return true
-		}
-
 		// No issues found
+		fmt.Println("Captive portal not found")
 		return false
 	}
 
@@ -80,6 +78,9 @@ func behindCaptivePortal() bool {
 		fmt.Println("All attempts timed out — assuming captive portal")
 		return true
 	}
+
+	fmt.Println("Captive portal not found")
+
 
 	return false
 }
