@@ -19,11 +19,9 @@ import (
 func networkChangedCallback() {
 	fmt.Println("Network change detected")
 
-	url := "http://clients3.google.com/generate_204"
-
-	if behindCaptivePortal() {
+	if isCaptive, captiveUrl := behindCaptivePortal(); isCaptive {
 		fmt.Println("Captive portal detected. Opening browser...")
-		openBrowser(url)
+		openBrowser(captiveUrl)
 	}
 }
 
@@ -37,10 +35,11 @@ func main() {
 	select {}
 }
 
-func behindCaptivePortal() bool {
+func behindCaptivePortal() (bool, string) {
 	client := &http.Client{
 		Timeout: 3 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Prevent following redirects so we can inspect the redirect URL
 			return http.ErrUseLastResponse
 		},
 	}
@@ -62,27 +61,26 @@ func behindCaptivePortal() bool {
 		}
 		defer resp.Body.Close()
 
-		// Captive portal usually redirects or doesn't return expected status
 		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
-			fmt.Printf("Redirect detected (status: %d)\n", resp.StatusCode)
-			return true
+			redirectURL := resp.Header.Get("Location")
+			if redirectURL == "" {
+				redirectURL = url // fallback if location not present
+			}
+			fmt.Printf("Redirect detected (status: %d, location: %s)\n", resp.StatusCode, redirectURL)
+			return true, redirectURL
 		}
 
-		// No issues found
 		fmt.Println("Captive portal not found")
-		return false
+		return false, url
 	}
 
-	// If all retries timed out, assume we're behind a captive portal
 	if timeoutCount == 3 {
 		fmt.Println("All attempts timed out — assuming captive portal")
-		return true
+		return true, url
 	}
 
 	fmt.Println("Captive portal not found")
-
-
-	return false
+	return false, url
 }
 
 func isTimeoutError(err error) bool {
@@ -92,6 +90,8 @@ func isTimeoutError(err error) bool {
 
 func openBrowser(url string) {
 	var cmd *exec.Cmd
+	fmt.Println("Opening browser to:", url)
+
 	switch runtime.GOOS {
 	case "darwin":
 		cmd = exec.Command("open", url)
