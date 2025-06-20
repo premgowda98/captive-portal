@@ -97,7 +97,8 @@ func behindCaptivePortal() (bool, string) {
 		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 			redirectURL := resp.Header.Get("Location")
 			if redirectURL == "" {
-				redirectURL = checkURL
+				time.Sleep(retryDelay)
+				continue
 			}
 			fmt.Printf("Redirect detected (status %d): Captive portal likely at %s", resp.StatusCode, redirectURL)
 			return true, redirectURL
@@ -108,7 +109,7 @@ func behindCaptivePortal() (bool, string) {
 	}
 
 	fmt.Println("Max attempts reached — assuming captive portal or unreachable network")
-	return true, checkURL
+	return false, checkURL
 }
 
 func openBrowser(url string) {
@@ -118,7 +119,12 @@ func openBrowser(url string) {
 	chromePath := detectChromePath()
 
 	if chromePath != "" {
-		cmd = exec.Command(chromePath, url)
+		switch runtime.GOOS {
+		case "darwin":
+			cmd = exec.Command("open", "-a", "Google Chrome", url)
+		default:
+			cmd = exec.Command(chromePath, url)
+		}
 	} else {
 		// Fallback to system default browser
 		switch runtime.GOOS {
