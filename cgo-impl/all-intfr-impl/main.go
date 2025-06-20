@@ -5,6 +5,7 @@ package main
 */
 import (
 	"C"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,6 +14,14 @@ import (
 	"time"
 
 	"github.com/premgowda/cgo-impl/iall-ntfr-impl/platform"
+)
+import "os"
+
+const (
+	checkURL    = "http://clients3.google.com/generate_204"
+	retryCount  = 5
+	retryDelay  = 1 * time.Second
+	httpTimeout = 3 * time.Second
 )
 
 //export networkChangedCallback
@@ -35,72 +44,144 @@ func main() {
 	select {}
 }
 
+func isNetworkReachable() bool {
+	conn, err := net.DialTimeout("udp", "8.8.8.8:53", 1*time.Second)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
+}
+
+func isTimeoutError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
+}
+
 func behindCaptivePortal() (bool, string) {
+
 	client := &http.Client{
-		Timeout: 3 * time.Second,
+		Timeout: httpTimeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// Prevent following redirects so we can inspect the redirect URL
+			// Don't follow redirects so we can inspect the portal behavior
 			return http.ErrUseLastResponse
 		},
 	}
 
-	url := "http://clients3.google.com/generate_204"
+	fmt.Printf("Checking for captive portal at: %s", checkURL)
 
-	fmt.Println("Checking captive portal at:", url)
+	for attempt := 1; attempt <= retryCount; attempt++ {
+		if !isNetworkReachable() {
+			fmt.Printf("Attempt %d: Network not reachable, waiting...", attempt)
+			time.Sleep(retryDelay)
+			continue
+		}
 
-	timeoutCount := 0
-	for i := 1; i <= 3; i++ {
-		resp, err := client.Get(url)
+		resp, err := client.Get(checkURL)
 		if err != nil {
-			fmt.Printf("Attempt %d: %v\n", i, err)
 			if isTimeoutError(err) {
-				timeoutCount++
+				fmt.Printf("Attempt %d: Request timed out, likely captive portal or slow net", attempt)
+				time.Sleep(retryDelay)
+				continue
 			}
-			time.Sleep(3 * time.Second)
+			fmt.Printf("Attempt %d: Unexpected error: %v", attempt, err)
+			time.Sleep(retryDelay)
 			continue
 		}
 		defer resp.Body.Close()
 
+		// captive portal redirect
 		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 			redirectURL := resp.Header.Get("Location")
 			if redirectURL == "" {
-				redirectURL = url // fallback if location not present
+				redirectURL = checkURL
 			}
-			fmt.Printf("Redirect detected (status: %d, location: %s)\n", resp.StatusCode, redirectURL)
+			fmt.Printf("Redirect detected (status %d): Captive portal likely at %s", resp.StatusCode, redirectURL)
 			return true, redirectURL
 		}
 
-		fmt.Println("Captive portal not found")
-		return false, url
+		fmt.Println("No captive portal detected")
+		return false, checkURL
 	}
 
-	if timeoutCount == 3 {
-		fmt.Println("All attempts timed out — assuming captive portal")
-		return true, url
-	}
-
-	fmt.Println("Captive portal not found")
-	return false, url
-}
-
-func isTimeoutError(err error) bool {
-	netErr, ok := err.(net.Error)
-	return ok && netErr.Timeout()
+	fmt.Println("Max attempts reached — assuming captive portal or unreachable network")
+	return true, checkURL
 }
 
 func openBrowser(url string) {
 	var cmd *exec.Cmd
 	fmt.Println("Opening browser to:", url)
 
+	chromePath := detectChromePath()
+
+	if chromePath != "" {
+		cmd = exec.Command(chromePath, url)
+	} else {
+		// Fallback to system default browser
+		switch runtime.GOOS {
+		case "darwin":
+			cmd = exec.Command("open", url)
+		case "linux":
+			cmd = exec.Command("xdg-open", url)
+		case "windows":
+			cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+		default:
+			fmt.Println("Unsupported platform")
+			return
+		}
+	}
+
+	if err := cmd.Start(); err != nil {
+		fmt.Println("Failed to open browser:", err)
+	}
+}
+
+func detectChromePath() string {
+	var paths []string
+
 	switch runtime.GOOS {
 	case "darwin":
-		cmd = exec.Command("open", url)
+		paths = []string{
+			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+		}
 	case "linux":
-		cmd = exec.Command("xdg-open", url)
+		paths = []string{
+			"google-chrome", "chrome", "chromium", "chromium-browser",
+		}
 	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+		paths = []string{
+			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
+			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
+		}
 	default:
-		return
+		return ""
 	}
-	_ = cmd.Start()
+
+	for _, path := range paths {
+		switch runtime.GOOS {
+		case "linux":
+			// Check if Chrome-like command exists in PATH
+			if fullPath, err := exec.LookPath(path); err == nil {
+				return fullPath
+			}
+		case "windows":
+			// Check is Chrome executable exists at the specified path
+			_, err := os.Stat(path)
+			if err == nil || !os.IsNotExist(err) {
+				return path
+			}
+
+		default: // macOS or others
+			// Use 'test -f' to check if file exists
+			checkCmd := exec.Command("test", "-f", path)
+			if err := checkCmd.Run(); err == nil {
+				return path
+			}
+		}
+	}
+
+	return ""
 }
