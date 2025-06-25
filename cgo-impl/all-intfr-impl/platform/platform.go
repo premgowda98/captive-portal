@@ -18,8 +18,7 @@ import (
 )
 
 var (
-	CaptiveCheckURLs2 map[string][]string
-	CaptiveCheckURLs  = map[string][]string{
+	CaptiveCheckURLs = map[string][]string{
 		"darwin": {
 			"http://captive.apple.com/hotspot-detect.html",
 			"http://clients3.google.com/generate_204",
@@ -44,7 +43,6 @@ const (
 //export networkChangedCallback
 func networkChangedCallback() {
 	slog.Info("Network change detected\n")
-	fmt.Println("Prem", CaptiveCheckURLs2)
 
 	if isCaptive, captiveUrl := behindCaptivePortal(); isCaptive {
 		slog.Info("Captive portal detected. Opening browser...\n")
