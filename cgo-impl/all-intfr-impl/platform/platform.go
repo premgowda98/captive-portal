@@ -142,7 +142,7 @@ func behindCaptivePortal() (bool, string) {
 			// clients3.google.com is a standard where it will give 204 No Content if the captive portal is not detected
 
 			if strings.Contains(url, "captive.apple.com") {
-				if strings.Contains(strings.ToLower(string(bodyBytes)), "success") {
+				if !strings.Contains(strings.ToLower(string(bodyBytes)), "success") {
 					slog.Info("Captive: captive.apple.com body does not contain 'Success', captive portal detected")
 					return true, url
 				}
