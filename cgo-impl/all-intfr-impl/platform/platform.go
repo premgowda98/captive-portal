@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"time"
 )
+import "strings"
 
 var (
 	CaptiveCheckURLs = map[string][]string{
@@ -24,11 +25,9 @@ var (
 			"http://clients3.google.com/generate_204",
 		},
 		"linux": {
-			"http://detectportal.firefox.com/success.txt",
 			"http://clients3.google.com/generate_204",
 		},
 		"windows": {
-			"http://www.msftncsi.com/ncsi.txt",
 			"http://clients3.google.com/generate_204",
 		},
 	}
@@ -134,6 +133,27 @@ func behindCaptivePortal() (bool, string) {
 				redirectURL,
 			))
 			return true, redirectURL
+		}
+
+		if resp.StatusCode == http.StatusOK {
+			// In some cases even if we get 200 OK, the body might indicate a captive portal
+			// Here captive portal hijacks the native os by sending javascript based redirects instead of HTTP redirects
+			// captive.apple.com is a standard where it will give success if the captive portal is not detected
+			// clients3.google.com is a standard where it will give 204 No Content if the captive portal is not detected
+
+			if strings.Contains(url, "captive.apple.com") {
+				if strings.Contains(strings.ToLower(string(bodyBytes)), "success") {
+					slog.Info("Captive: captive.apple.com body does not contain 'Success', captive portal detected")
+					return true, url
+				}
+			}
+
+			if strings.Contains(url, "clients3.google.com") {
+				if len(bodyBytes) != 0 {
+					slog.Info("Captive: clients3.google.com body is not empty, captive portal detected")
+					return true, url
+				}
+			}
 		}
 
 		slog.Info("Captive: No captive portal detected\n")
