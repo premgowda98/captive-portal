@@ -10,7 +10,7 @@ import (
 
 func main() {
 
-	slog.SetLogLoggerLevel(slog.LevelError)
+	slog.SetLogLoggerLevel(slog.LevelInfo)
 	slog.Info(fmt.Sprintf("Starting network monitor for %s\n", runtime.GOOS))
 	// to test captive at first run
 	go platform.StartNetworkMonitor()
