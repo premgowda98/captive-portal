@@ -14,15 +14,15 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
+	"sync"
 	"time"
 )
-import "strings"
 
 var (
 	CaptiveCheckURLs = map[string][]string{
 		"darwin": {
 			"http://captive.apple.com/hotspot-detect.html",
-			"http://clients3.google.com/generate_204",
 		},
 		"linux": {
 			"http://clients3.google.com/generate_204",
@@ -31,6 +31,10 @@ var (
 			"http://clients3.google.com/generate_204",
 		},
 	}
+
+	lastBrowserOpenTime     time.Time
+	browserOpenMutex        sync.Mutex
+	browserDebounceInterval = 15 * time.Second
 )
 
 const (
@@ -41,9 +45,20 @@ const (
 
 //export networkChangedCallback
 func networkChangedCallback() {
+
 	slog.Info("Network change detected\n")
 
 	if isCaptive, captiveUrl := behindCaptivePortal(); isCaptive {
+		browserOpenMutex.Lock()
+		defer browserOpenMutex.Unlock()
+		now := time.Now()
+
+		if now.Sub(lastBrowserOpenTime) < browserDebounceInterval {
+			slog.Info(fmt.Sprintf("Browser already opened %v ago, skipping...", now.Sub(lastBrowserOpenTime)))
+			return
+		}
+
+		lastBrowserOpenTime = now
 		slog.Info("Captive portal detected. Opening browser...\n")
 		openBrowser(captiveUrl)
 	}

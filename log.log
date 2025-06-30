@@ -1,0 +1,26 @@
+premgowda@premgowdas-iMac-Pro: ~/Downloads/kitecyber/captive-portal  % go run .
+2025/06/30 08:17:11 INFO Starting network monitor for darwin
+2025-06-30 08:17:11.928 iall-ntfr-impl[67138:454930] Started monitoring network changes...
+2025/06/30 08:17:34 INFO Network change detected
+2025/06/30 08:17:34 INFO Captive: Attempt 1: Network not reachable, waiting...
+2025/06/30 08:17:35 INFO Captive: Attempt 2: Network not reachable, waiting...
+2025/06/30 08:17:36 INFO Captive: Attempt 3: Sending request to http://captive.apple.com/hotspot-detect.html
+2025/06/30 08:17:38 INFO Captive: Response Status=302
+2025/06/30 08:17:38 INFO Captive: Response Headers: map[Cache-Control:[no-cache, no-store, must-revalidate] Content-Type:[text/html; charset=UTF-8] Date:[Mon, 30 Jun 2025 02:47:38 GMT] Expires:[0] Location:[https://captive.premgowda.in:8003/index.php?zone=captiveportalguest&redirurl=http%3A%2F%2Fcaptive.apple.com%2Fhotspot-detect.html] Pragma:[no-cache] Server:[nginx] X-Frame-Options:[SAMEORIGIN]]
+2025/06/30 08:17:38 INFO Captive: Response Body:
+
+2025/06/30 08:17:38 INFO Captive: Redirect detected (status 302): Captive portal likely at https://captive.premgowda.in:8003/index.php?zone=captiveportalguest&redirurl=http%3A%2F%2Fcaptive.apple.com%2Fhotspot-detect.html
+2025/06/30 08:17:38 INFO Captive portal detected. Opening browser...
+2025/06/30 08:17:38 INFO Opening browser to: https://captive.premgowda.in:8003/index.php?zone=captiveportalguest&redirurl=http%3A%2F%2Fcaptive.apple.com%2Fhotspot-detect.html
+2025/06/30 08:17:39 INFO Network change detected
+2025/06/30 08:17:39 INFO Captive: Attempt 1: Sending request to http://captive.apple.com/hotspot-detect.html
+2025/06/30 08:17:42 INFO Captive: Attempt 1: Request timed out, likely captive portal or slow net
+2025/06/30 08:17:43 INFO Captive: Attempt 2: Sending request to http://captive.apple.com/hotspot-detect.html
+2025/06/30 08:17:44 INFO Captive: Response Status=302
+2025/06/30 08:17:44 INFO Captive: Response Headers: map[Cache-Control:[no-cache, no-store, must-revalidate] Content-Type:[text/html; charset=UTF-8] Date:[Mon, 30 Jun 2025 02:47:44 GMT] Expires:[0] Location:[https://captive.premgowda.in:8003/index.php?zone=captiveportalguest&redirurl=http%3A%2F%2Fcaptive.apple.com%2Fhotspot-detect.html] Pragma:[no-cache] Server:[nginx] X-Frame-Options:[SAMEORIGIN]]
+2025/06/30 08:17:44 INFO Captive: Response Body:
+
+2025/06/30 08:17:44 INFO Captive: Redirect detected (status 302): Captive portal likely at https://captive.premgowda.in:8003/index.php?zone=captiveportalguest&redirurl=http%3A%2F%2Fcaptive.apple.com%2Fhotspot-detect.html
+2025/06/30 08:17:44 INFO Captive portal detected. Opening browser...
+2025/06/30 08:17:44 INFO Opening browser to: https://captive.premgowda.in:8003/index.php?zone=captiveportalguest&redirurl=http%3A%2F%2Fcaptive.apple.com%2Fhotspot-detect.html
+^Csignal: interrupt

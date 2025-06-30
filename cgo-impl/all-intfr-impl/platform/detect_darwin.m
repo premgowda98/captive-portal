@@ -18,7 +18,7 @@ void startMonitoringNetworkChanges() {
 
     CFStringRef patterns[2] = {
         CFSTR("State:/Network/Interface/.*/IPv4"),
-        CFSTR("State:/Network/Global/IPv4")
+        CFSTR("State:/Network/Interface/.*/IPv6"),
     };
     CFArrayRef patternArray = CFArrayCreate(NULL, (const void **)patterns, 2, &kCFTypeArrayCallBacks);
 
