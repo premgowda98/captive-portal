@@ -34,7 +34,7 @@ var (
 
 	lastBrowserOpenTime     time.Time
 	browserOpenMutex        sync.Mutex
-	browserDebounceInterval = 15 * time.Second
+	browserDebounceInterval = 30 * time.Second
 )
 
 const (
